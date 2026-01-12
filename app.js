@@ -192,55 +192,25 @@ function renderPowerupLeaderboard(totals) {
 function renderPlayerCards(stats) {
     const container = document.getElementById('player-grids');
     container.innerHTML = ""; 
+    
+    // 1. Save to Global State
+    GLOBAL_PLAYER_STATS = stats;
 
     Object.keys(stats).sort().forEach((player, index) => {
         const safeName = player.replace(/[^a-zA-Z0-9]/g, '');
-        const items = stats[player];
-
-        // --- NEW SORTING LOGIC ---
-        const labels = Object.keys(items).sort((a, b) => {
-            // 1. Primary: Sort by Usage (Descending)
-            const usageDiff = items[b].used - items[a].used;
-            if (usageDiff !== 0) return usageDiff;
-            
-            // 2. Secondary: Sort Alphabetically (Ascending)
-            return a.localeCompare(b);
-        });
-        // -------------------------
-
-        // Prepare Data arrays using the sorted labels
-        const usageData = labels.map(i => items[i].used);
-        const goalsData = labels.map(i => items[i].goals);
-        const colors = labels.map(i => POWERUP_COLORS[i] || DEFAULT_COLOR);
-
-        // Calculate Totals
-        const totalU = usageData.reduce((a,b)=>a+b,0);
-        const totalG = goalsData.reduce((a,b)=>a+b,0);
-
-        // --- NEW: Generate Table Rows ---
-        // Sort items by usage count for the table
-        const sortedItems = Object.entries(items).sort((a,b) => b[1].used - a[1].used);
+        const cardId = `player-${safeName}`;
         
-        const tableRows = sortedItems.map(([pName, pStats]) => {
-            const conversionRate = pStats.used > 0 ? ((pStats.goals / pStats.used) * 100).toFixed(0) : 0;
-            // Clean filename
-            const filename = pName.toLowerCase().replace(/[^a-z0-9]/g, "") + ".webp";
-            
-            return `
-            <tr class="border-b border-slate-700/50 hover:bg-slate-700/30 text-sm">
-                <td class="py-2 pl-2 flex items-center gap-2">
-                    <img src="assets/${filename}" class="w-5 h-5 opacity-75" onerror="this.style.display='none'">
-                    <span class="text-slate-300">${pName}</span>
-                </td>
-                <td class="text-center font-mono text-rblue">${pStats.used}</td>
-                <td class="text-center font-mono text-rorange">${pStats.goals}</td>
-                <td class="text-center font-mono text-slate-500 text-xs">${conversionRate}%</td>
-            </tr>`;
-        }).join('');
+        // Initialize Default Sort State (Used Descending)
+        CARD_SORT_STATE[cardId] = { column: 'used', direction: 'desc' };
 
-        // Generate HTML Card
+        // Calculate Totals for Header
+        const items = stats[player];
+        const totalU = Object.values(items).reduce((a,b)=>a+b.used,0);
+        const totalG = Object.values(items).reduce((a,b)=>a+b.goals,0);
+
+        // Generate Base HTML (Table Body is empty initially)
         const cardHtml = `
-        <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg flex flex-col h-full">
+        <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg flex flex-col h-full" id="${cardId}">
             <div class="flex justify-between items-center mb-6 border-b border-slate-700 pb-4">
                 <h3 class="text-xl font-bold text-white">${player}</h3>
                 <div class="flex gap-4 text-sm">
@@ -252,16 +222,11 @@ function renderPlayerCards(stats) {
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
                 <div>
                     <h4 class="text-xs uppercase tracking-widest text-slate-400 mb-2 text-center">Activations</h4>
-                    <div class="h-64">
-                        <canvas id="chart-usage-${safeName}-${index}"></canvas>
-                    </div>
+                    <div class="h-48"><canvas id="chart-usage-${safeName}-${index}"></canvas></div>
                 </div>
-                
                 <div>
                     <h4 class="text-xs uppercase tracking-widest text-slate-400 mb-2 text-center">Goals Scored</h4>
-                    <div class="h-64">
-                        <canvas id="chart-goals-${safeName}-${index}"></canvas>
-                    </div>
+                    <div class="h-48"><canvas id="chart-goals-${safeName}-${index}"></canvas></div>
                 </div>
             </div>
 
@@ -270,27 +235,33 @@ function renderPlayerCards(stats) {
                 <div class="overflow-x-auto">
                     <table class="w-full text-left border-collapse">
                         <thead>
-                            <tr class="text-xs text-slate-500 uppercase">
-                                <th class="pb-2 pl-2 font-normal">Powerup</th>
-                                <th class="pb-2 text-center font-normal">Used</th>
-                                <th class="pb-2 text-center font-normal">Goals</th>
-                                <th class="pb-2 text-center font-normal">Conv.</th>
+                            <tr class="text-xs text-slate-500 uppercase cursor-pointer select-none">
+                                <th class="pb-2 pl-2 font-normal hover:text-white transition" onclick="handleSort('${cardId}', 'name', 'player')">Powerup ↕</th>
+                                <th class="pb-2 text-center font-normal hover:text-white transition" onclick="handleSort('${cardId}', 'used', 'player')">Used ↕</th>
+                                <th class="pb-2 text-center font-normal hover:text-white transition" onclick="handleSort('${cardId}', 'goals', 'player')">Goals ↕</th>
+                                <th class="pb-2 text-center font-normal hover:text-white transition" onclick="handleSort('${cardId}', 'conv', 'player')">Conv. ↕</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            ${tableRows}
-                        </tbody>
+                        <tbody id="tbody-${cardId}">
+                            </tbody>
                     </table>
                 </div>
             </div>
-        </div>
-        `;
+        </div>`;
         
         container.insertAdjacentHTML('beforeend', cardHtml);
 
-        // Initialize Charts
+        // Render Charts (Standard logic)
+        const labels = Object.keys(items).sort((a,b) => items[b].used - items[a].used); // Default sort for charts
+        const usageData = labels.map(i => items[i].used);
+        const goalsData = labels.map(i => items[i].goals);
+        const colors = labels.map(i => POWERUP_COLORS[i] || DEFAULT_COLOR);
+
         createMiniChart(`chart-usage-${safeName}-${index}`, labels, usageData, colors);
         createMiniChart(`chart-goals-${safeName}-${index}`, labels, goalsData, colors);
+
+        // Initial Table Render
+        renderTableBody(cardId, player, 'player');
     });
 }
 
@@ -488,53 +459,28 @@ function renderTeamFairnessChart(stats) {
 
 function renderTeamCards(stats) {
     const container = document.getElementById('team-grids');
-    container.innerHTML = ""; 
-    
-    // UPDATED: Added 'grid-cols-1' to the container via JS ensures it respects the layout request
     container.className = "grid grid-cols-1 gap-8"; 
+    container.innerHTML = ""; 
+
+    // 1. Save to Global State
+    GLOBAL_TEAM_STATS = stats;
 
     Object.keys(stats).sort().forEach((teamName) => {
         const safeName = teamName.replace(/[^a-zA-Z0-9]/g, '');
+        const cardId = `team-${safeName}`;
+
+        // Initialize Default Sort State
+        CARD_SORT_STATE[cardId] = { column: 'used', direction: 'desc' };
+
         const items = stats[teamName];
-        
-        // Use a generic nice color since teams are dynamic
         const themeColor = "text-indigo-400";
         const borderColor = "border-indigo-500/30";
-
-        // Sort Data (Usage Descending, then Alphabetical)
-        const labels = Object.keys(items).sort((a, b) => {
-            const usageDiff = items[b].used - items[a].used;
-            if (usageDiff !== 0) return usageDiff;
-            return a.localeCompare(b);
-        });
-
-        const usageData = labels.map(i => items[i].used);
-        const goalsData = labels.map(i => items[i].goals);
-        const colors = labels.map(i => POWERUP_COLORS[i] || DEFAULT_COLOR);
         
-        const totalU = usageData.reduce((a,b)=>a+b,0);
-        const totalG = goalsData.reduce((a,b)=>a+b,0);
-
-        // Generate Table Rows
-        const tableRows = labels.map(pName => {
-            const pStats = items[pName];
-            const conversionRate = pStats.used > 0 ? ((pStats.goals / pStats.used) * 100).toFixed(0) : 0;
-            const filename = pName.toLowerCase().replace(/[^a-z0-9]/g, "") + ".webp";
-            
-            return `
-            <tr class="border-b border-slate-700/50 hover:bg-slate-700/30 text-sm">
-                <td class="py-2 pl-2 flex items-center gap-2">
-                    <img src="assets/${filename}" class="w-5 h-5 opacity-75" onerror="this.style.display='none'">
-                    <span class="text-slate-300">${pName}</span>
-                </td>
-                <td class="text-center font-mono text-rblue">${pStats.used}</td>
-                <td class="text-center font-mono text-rorange">${pStats.goals}</td>
-                <td class="text-center font-mono text-slate-500 text-xs">${conversionRate}%</td>
-            </tr>`;
-        }).join('');
+        const totalU = Object.values(items).reduce((a,b)=>a+b.used,0);
+        const totalG = Object.values(items).reduce((a,b)=>a+b.goals,0);
 
         const cardHtml = `
-        <div class="bg-slate-800 p-6 rounded-xl border ${borderColor} shadow-lg flex flex-col h-full">
+        <div class="bg-slate-800 p-6 rounded-xl border ${borderColor} shadow-lg flex flex-col h-full" id="${cardId}">
             <div class="flex justify-between items-center mb-6 border-b border-slate-700 pb-4">
                 <h3 class="text-xl font-bold ${themeColor} flex items-center gap-2">
                     <span class="text-2xl">👥</span> ${teamName}
@@ -546,40 +492,144 @@ function renderTeamCards(stats) {
             </div>
             
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
-                <div>
-                    <h4 class="text-xs uppercase tracking-widest text-slate-400 mb-2 text-center">Activations</h4>
-                    <div class="h-48">
-                        <canvas id="chart-team-usage-${safeName}"></canvas>
-                    </div>
-                </div>
-                <div>
-                    <h4 class="text-xs uppercase tracking-widest text-slate-400 mb-2 text-center">Goals Scored</h4>
-                    <div class="h-48">
-                        <canvas id="chart-team-goals-${safeName}"></canvas>
-                    </div>
-                </div>
+                <div class="h-48"><canvas id="chart-team-usage-${safeName}"></canvas></div>
+                <div class="h-48"><canvas id="chart-team-goals-${safeName}"></canvas></div>
             </div>
 
             <div class="mt-auto border-t border-slate-700 pt-4">
                 <div class="overflow-x-auto">
                     <table class="w-full text-left border-collapse">
                         <thead>
-                            <tr class="text-xs text-slate-500 uppercase">
-                                <th class="pb-2 pl-2 font-normal">Powerup</th>
-                                <th class="pb-2 text-center font-normal">Used</th>
-                                <th class="pb-2 text-center font-normal">Goals</th>
-                                <th class="pb-2 text-center font-normal">Conv.</th>
+                            <tr class="text-xs text-slate-500 uppercase cursor-pointer select-none">
+                                <th class="pb-2 pl-2 font-normal hover:text-white transition" onclick="handleSort('${cardId}', 'name', 'team')">Powerup ↕</th>
+                                <th class="pb-2 text-center font-normal hover:text-white transition" onclick="handleSort('${cardId}', 'used', 'team')">Used ↕</th>
+                                <th class="pb-2 text-center font-normal hover:text-white transition" onclick="handleSort('${cardId}', 'goals', 'team')">Goals ↕</th>
+                                <th class="pb-2 text-center font-normal hover:text-white transition" onclick="handleSort('${cardId}', 'conv', 'team')">Conv. ↕</th>
                             </tr>
                         </thead>
-                        <tbody>${tableRows}</tbody>
+                        <tbody id="tbody-${cardId}">
+                            </tbody>
                     </table>
                 </div>
             </div>
         </div>`;
         
         container.insertAdjacentHTML('beforeend', cardHtml);
+
+        const labels = Object.keys(items).sort((a,b) => items[b].used - items[a].used);
+        const usageData = labels.map(i => items[i].used);
+        const goalsData = labels.map(i => items[i].goals);
+        const colors = labels.map(i => POWERUP_COLORS[i] || DEFAULT_COLOR);
+
         createMiniChart(`chart-team-usage-${safeName}`, labels, usageData, colors);
         createMiniChart(`chart-team-goals-${safeName}`, labels, goalsData, colors);
+
+        // Initial Table Render
+        renderTableBody(cardId, teamName, 'team');
+    });
+}
+
+// --- SORTING LOGIC ---
+
+function handleSort(cardId, column, type) {
+    // 1. Toggle Direction
+    const currentState = CARD_SORT_STATE[cardId];
+    if (currentState.column === column) {
+        // Toggle asc/desc
+        currentState.direction = currentState.direction === 'asc' ? 'desc' : 'asc';
+    } else {
+        // New column, default to desc for numbers, asc for names
+        currentState.column = column;
+        currentState.direction = column === 'name' ? 'asc' : 'desc';
+    }
+
+    // 2. Identify the Entity Name from the ID (reverse engineering safeName is hard, so we loop)
+    // A cleaner way is to look up the entity name in our state keys
+    let entityName = "";
+    
+    if (type === 'player') {
+        // Find which player matches this safe ID
+        entityName = Object.keys(GLOBAL_PLAYER_STATS).find(name => 
+            `player-${name.replace(/[^a-zA-Z0-9]/g, '')}` === cardId
+        );
+    } else {
+        entityName = Object.keys(GLOBAL_TEAM_STATS).find(name => 
+            `team-${name.replace(/[^a-zA-Z0-9]/g, '')}` === cardId
+        );
+    }
+
+    if (entityName) {
+        renderTableBody(cardId, entityName, type);
+        updateSortIcons(cardId, column, currentState.direction);
+    }
+}
+
+function renderTableBody(cardId, entityName, type) {
+    const stats = type === 'player' ? GLOBAL_PLAYER_STATS[entityName] : GLOBAL_TEAM_STATS[entityName];
+    const sortState = CARD_SORT_STATE[cardId];
+    const tbody = document.getElementById(`tbody-${cardId}`);
+    
+    if (!tbody || !stats) return;
+
+    // Convert to Array for sorting
+    const rows = Object.entries(stats).map(([name, data]) => ({
+        name: name,
+        used: data.used,
+        goals: data.goals,
+        conv: data.used > 0 ? (data.goals / data.used) * 100 : 0
+    }));
+
+    // Sort
+    rows.sort((a, b) => {
+        let valA = a[sortState.column];
+        let valB = b[sortState.column];
+        
+        // String comparison for names
+        if (sortState.column === 'name') {
+            return sortState.direction === 'asc' 
+                ? valA.localeCompare(valB) 
+                : valB.localeCompare(valA);
+        }
+        
+        // Numeric comparison
+        return sortState.direction === 'asc' ? valA - valB : valB - valA;
+    });
+
+    // Generate HTML
+    tbody.innerHTML = rows.map(row => {
+        const filename = row.name.toLowerCase().replace(/[^a-z0-9]/g, "") + ".webp";
+        
+        return `
+        <tr class="border-b border-slate-700/50 hover:bg-slate-700/30 text-sm transition">
+            <td class="py-2 pl-2 flex items-center gap-2">
+                <img src="assets/${filename}" class="w-5 h-5 opacity-75" onerror="this.style.display='none'">
+                <span class="text-slate-300">${row.name}</span>
+            </td>
+            <td class="text-center font-mono text-rblue">${row.used}</td>
+            <td class="text-center font-mono text-rorange">${row.goals}</td>
+            <td class="text-center font-mono text-slate-500 text-xs">${row.conv.toFixed(0)}%</td>
+        </tr>`;
+    }).join('');
+}
+
+function updateSortIcons(cardId, activeColumn, direction) {
+    // Optional: Update the arrow icons in headers to show which is active
+    // This is a nice-to-have visual polish
+    const headers = document.querySelectorAll(`#${cardId} thead th`);
+    headers.forEach((th, index) => {
+        // Reset text
+        const text = th.innerText.replace(/ ↑| ↓| ↕/g, ''); 
+        
+        // Map index to column key (Hardcoded order matches HTML)
+        const keys = ['name', 'used', 'goals', 'conv'];
+        
+        if (keys[index] === activeColumn) {
+            th.innerText = text + (direction === 'asc' ? ' ↑' : ' ↓');
+            th.classList.add('text-white', 'font-bold'); // Highlight active
+        } else {
+            th.innerText = text + ' ↕';
+            th.classList.remove('text-white', 'font-bold');
+        }
     });
 }
 
