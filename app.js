@@ -1,5 +1,5 @@
-const SUPABASE_URL = CONFIG.SUPABASE_URL;
-const SUPABASE_KEY = CONFIG.SUPABASE_KEY;
+// const SUPABASE_URL = CONFIG.SUPABASE_URL;
+// const SUPABASE_KEY = CONFIG.SUPABASE_KEY;
 
 // --- STATE MANAGEMENT ---
 // Stores the data for every card so we can re-sort it later
@@ -151,6 +151,10 @@ function renderCharts(events, matches) {
     renderPowerupLeaderboard(totalUsage);
     renderPlayerCards(playerStats);
     renderFairnessChart(playerStats);
+    renderTeamAnalytics(events, matches);
+    renderTopScorers(events);
+    renderRivalries(matches);
+    
     renderTeamAnalytics(events, matches);
 }
 
@@ -631,6 +635,93 @@ function updateSortIcons(cardId, activeColumn, direction) {
             th.classList.remove('text-white', 'font-bold');
         }
     });
+}
+
+// --- NEW: TOP SCORERS LOGIC ---
+function renderTopScorers(events) {
+    const playerGoals = {};
+
+    events.forEach(e => {
+        if (e.event_type === 'Goal') {
+            const pName = e.player_name;
+            if (!playerGoals[pName]) playerGoals[pName] = { total: 0, rumble: 0 };
+            
+            playerGoals[pName].total++;
+            if (e.powerup_name !== 'None') {
+                playerGoals[pName].rumble++;
+            }
+        }
+    });
+
+    const sorted = Object.entries(playerGoals).sort((a, b) => b[1].total - a[1].total);
+
+    document.getElementById('scorers-table-body').innerHTML = sorted.map(([name, stats]) => {
+        const rumblePct = stats.total > 0 ? ((stats.rumble / stats.total) * 100).toFixed(0) : 0;
+        
+        return `
+        <tr class="border-b border-slate-700/50 hover:bg-slate-700/30 transition">
+            <td class="p-3 font-semibold text-white">${name}</td>
+            <td class="p-3 text-center text-rorange font-mono text-lg">${stats.total}</td>
+            <td class="p-3 text-right text-slate-400 font-mono">${rumblePct}%</td>
+        </tr>`;
+    }).join('');
+}
+
+// --- NEW: RIVALRY LOGIC ---
+function renderRivalries(matches) {
+    const rivalries = {};
+
+    matches.forEach(m => {
+        // 1. Get Team Names (Sorted alphabetically to ensure consistency)
+        const t0Name = (m.team0_players || []).sort().join(" & ");
+        const t1Name = (m.team1_players || []).sort().join(" & ");
+
+        if (!t0Name || !t1Name) return;
+
+        // 2. Create a unique Matchup ID that is consistent regardless of who is Team0/Team1
+        // We sort the two team names: "A vs B" is the same as "B vs A"
+        const [teamA, teamB] = [t0Name, t1Name].sort();
+        const rivalryKey = `${teamA} vs ${teamB}`;
+
+        if (!rivalries[rivalryKey]) {
+            rivalries[rivalryKey] = { 
+                teamA: teamA, 
+                teamB: teamB, 
+                winsA: 0, 
+                winsB: 0, 
+                games: 0 
+            };
+        }
+
+        // 3. Update Stats
+        rivalries[rivalryKey].games++;
+        
+        // Determine who won this specific match
+        const winnerName = m.winning_team === 0 ? t0Name : t1Name;
+
+        if (winnerName === teamA) rivalries[rivalryKey].winsA++;
+        else rivalries[rivalryKey].winsB++;
+    });
+
+    // 4. Sort by Total Games Played
+    const sorted = Object.values(rivalries).sort((a, b) => b.games - a.games);
+
+    document.getElementById('rivalry-table-body').innerHTML = sorted.map(r => {
+        // Highlight the leader
+        const colorA = r.winsA > r.winsB ? "text-green-400 font-bold" : "text-slate-400";
+        const colorB = r.winsB > r.winsA ? "text-green-400 font-bold" : "text-slate-400";
+
+        return `
+        <tr class="border-b border-slate-700/50 hover:bg-slate-700/30 transition">
+            <td class="p-3 text-right ${colorA}">${r.teamA}</td>
+            <td class="p-3 text-center">
+                <span class="bg-slate-900 px-2 py-1 rounded text-white font-mono">
+                    ${r.winsA} - ${r.winsB}
+                </span>
+            </td>
+            <td class="p-3 text-left ${colorB}">${r.teamB}</td>
+        </tr>`;
+    }).join('');
 }
 
 // Start the app
