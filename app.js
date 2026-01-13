@@ -1,5 +1,5 @@
-// const SUPABASE_URL = CONFIG.SUPABASE_URL;
-// const SUPABASE_KEY = CONFIG.SUPABASE_KEY;
+const SUPABASE_URL = CONFIG.SUPABASE_URL;
+const SUPABASE_KEY = CONFIG.SUPABASE_KEY;
 
 // --- STATE MANAGEMENT ---
 // Stores the data for every card so we can re-sort it later
