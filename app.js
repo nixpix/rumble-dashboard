@@ -10,6 +10,7 @@ let GLOBAL_TEAM_STATS = {};
 // Stores the current sort state for every card
 // Format: { "PlayerName": { column: "used", direction: "desc" } }
 let CARD_SORT_STATE = {};
+let GLOBAL_CHART_INSTANCES = {};
 
 // FIX: We rename this variable to 'db' to avoid conflict with the library name 'supabase'
 const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -234,6 +235,10 @@ function renderFairnessChart(canvasId, stats) {
     const ctx = document.getElementById(canvasId);
     if (!ctx) return;
 
+    if (GLOBAL_CHART_INSTANCES[canvasId]) {
+        GLOBAL_CHART_INSTANCES[canvasId].destroy();
+    }
+
     const players = Object.keys(stats).sort();
     const allPowerups = Object.keys(POWERUP_COLORS);
 
@@ -249,7 +254,7 @@ function renderFairnessChart(canvasId, stats) {
         barPercentage: 0.6,
     }));
 
-    new Chart(ctx, {
+    const chart = new Chart(ctx, {
         type: 'bar',
         data: { labels: players, datasets: datasets },
         options: {
@@ -264,11 +269,16 @@ function renderFairnessChart(canvasId, stats) {
             }
         }
     });
+    GLOBAL_CHART_INSTANCES[canvasId] = chart;
 }
 
 function renderTeamFairnessChart(canvasId, stats) {
     const ctx = document.getElementById(canvasId);
     if (!ctx) return;
+
+    if (GLOBAL_CHART_INSTANCES[canvasId]) {
+        GLOBAL_CHART_INSTANCES[canvasId].destroy();
+    }
 
     const teams = Object.keys(stats).sort();
     const allPowerups = Object.keys(POWERUP_COLORS);
@@ -285,7 +295,7 @@ function renderTeamFairnessChart(canvasId, stats) {
         barPercentage: 0.6,
     }));
 
-    new Chart(ctx, {
+    const chart = new Chart(ctx, {
         type: 'bar',
         data: { labels: teams, datasets: datasets },
         options: {
@@ -297,6 +307,7 @@ function renderTeamFairnessChart(canvasId, stats) {
             plugins: { legend: { display: false } }
         }
     });
+    GLOBAL_CHART_INSTANCES[canvasId] = chart;
 }
 
 function renderTopScorers(tbodyId, events) {
@@ -482,7 +493,11 @@ function renderTeamCards(stats) {
 function createMiniChart(canvasId, labels, data, colors) {
     const ctx = document.getElementById(canvasId);
     if (!ctx) return;
-    new Chart(ctx, {
+
+    if (GLOBAL_CHART_INSTANCES[canvasId]) {
+        GLOBAL_CHART_INSTANCES[canvasId].destroy();
+    }
+    const chart = new Chart(ctx, {
         type: 'bar',
         data: { labels: labels, datasets: [{ data: data, backgroundColor: colors, borderRadius: 4 }] },
         options: {
@@ -494,6 +509,7 @@ function createMiniChart(canvasId, labels, data, colors) {
             }
         }
     });
+    GLOBAL_CHART_INSTANCES[canvasId] = chart;
 }
 
 // --- SORTING LOGIC ---
