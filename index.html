@@ -34,57 +34,56 @@
             <h2 class="text-2xl font-bold mb-4 text-amber-400 border-b border-slate-700 pb-2">
                 Last Playday Stats <span id="last-playday-date" class="text-lg font-normal text-slate-400"></span>
             </h2>
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div class="bg-slate-800 p-5 rounded-xl border border-slate-700">
-                    <h3 class="text-slate-400 text-sm uppercase tracking-wider">Matches</h3>
-                    <p id="last-day-matches" class="text-3xl font-bold mt-1">--</p>
+            <div id="last-playday-charts-container" class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div class="bg-slate-800 p-6 rounded-xl border border-slate-700">
+                    <h2 class="text-xl font-bold mb-4">🏆 Goal Scorers</h2>
+                    <div class="overflow-x-auto max-h-96">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="text-slate-400 border-b border-slate-700 text-sm">
+                                    <th class="p-3">Player</th>
+                                    <th class="p-3 text-center">Goals</th>
+                                    <th class="p-3 text-right">Rumble %</th>
+                                </tr>
+                            </thead>
+                            <tbody id="last-day-scorers-table-body" class="text-sm font-medium"></tbody>
+                        </table>
+                    </div>
                 </div>
-                <div class="bg-slate-800 p-5 rounded-xl border border-slate-700">
-                    <h3 class="text-slate-400 text-sm uppercase tracking-wider">Powerups Used</h3>
-                    <p id="last-day-powerups" class="text-3xl font-bold mt-1 text-rblue">--</p>
-                </div>
-                <div class="bg-slate-800 p-5 rounded-xl border border-slate-700">
-                    <h3 class="text-slate-400 text-sm uppercase tracking-wider">Rumble Goals</h3>
-                    <p id="last-day-rumble-goals" class="text-3xl font-bold mt-1 text-rorange">--</p>
-                </div>
-                <div class="bg-slate-800 p-5 rounded-xl border border-slate-700">
-                    <h3 class="text-slate-400 text-sm uppercase tracking-wider">Avg Goal Delay</h3>
-                    <p id="last-day-avg-delay" class="text-3xl font-bold mt-1 text-purple-400">--</p>
-                </div>
-            </div>
-        </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-            <div class="bg-slate-800 p-5 rounded-xl border border-slate-700">
-                <h3 class="text-slate-400 text-sm uppercase tracking-wider">Total Matches</h3>
-                <p id="total-matches" class="text-3xl font-bold mt-1">--</p>
-            </div>
-            <div class="bg-slate-800 p-5 rounded-xl border border-slate-700">
-                <h3 class="text-slate-400 text-sm uppercase tracking-wider">Total Powerups Used</h3>
-                <p id="total-powerups" class="text-3xl font-bold mt-1 text-rblue">--</p>
-            </div>
-            <div class="bg-slate-800 p-5 rounded-xl border border-slate-700">
-                <h3 class="text-slate-400 text-sm uppercase tracking-wider">Total Rumble Goals</h3>
-                <p id="total-rumble-goals" class="text-3xl font-bold mt-1 text-rorange">--</p>
-            </div>
-            <div class="bg-slate-800 p-5 rounded-xl border border-slate-700">
-                <h3 class="text-slate-400 text-sm uppercase tracking-wider">Avg Goal Delay After Using Powerup</h3>
-                <p id="avg-delay" class="text-3xl font-bold mt-1 text-purple-400">--</p>
-            </div>
-        </div>
+                <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 flex flex-col">
+                    <h2 class="text-xl font-bold mb-4">⚡ Most Used Powerups</h2>
+                    <div id="last-day-powerup-leaderboard" class="space-y-3 max-h-96 overflow-y-auto"></div>
+                </div>
 
-        <div class="grid grid-cols-1 gap-8 mb-8">
-            <div class="bg-slate-800 p-6 rounded-xl border border-slate-700">
-                <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
-                    ⚖️ Team RNG Fairness
-                    <span class="text-xs font-normal text-slate-500 bg-slate-900 px-2 py-1 rounded">Normalized
-                        Distribution</span>
-                </h2>
-                <div class="h-48">
-                    <canvas id="chart-team-fairness"></canvas>
+                <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 h-80">
+                    <h2 class="text-xl font-bold mb-4">⚖️ Team RNG Fairness</h2>
+                    <canvas id="last-day-chart-team-fairness"></canvas>
+                </div>
+
+                <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 h-80">
+                    <h2 class="text-xl font-bold mb-4">⚖️ Player RNG Fairness</h2>
+                    <canvas id="last-day-chart-fairness"></canvas>
                 </div>
             </div>
-        </div>
+                </div>
+        
+                <hr class="border-slate-700 my-12">
+        
+                <h2 class="text-2xl font-bold mb-6 border-b border-slate-700 pb-2 text-indigo-400">Lifetime Analytics</h2>
+        
+                <div class="grid grid-cols-1 gap-8 mb-8">
+                    <div class="bg-slate-800 p-6 rounded-xl border border-slate-700">
+                        <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
+                            ⚖️ Team RNG Fairness
+                            <span class="text-xs font-normal text-slate-500 bg-slate-900 px-2 py-1 rounded">Normalized
+                                Distribution</span>
+                        </h2>
+                        <div class="h-48">
+                            <canvas id="chart-team-fairness"></canvas>
+                        </div>
+                    </div>
+                </div>
 
         <div class="grid grid-cols-1 gap-8 mb-8">
             <div class="bg-slate-800 p-6 rounded-xl border border-slate-700">
